@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Fruit Slash</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{
+  overflow:hidden;
+  font-family:Arial,sans-serif;
+  background:#050b14;
+  color:white;
+  touch-action:none;
+}
+
+#game{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 30%,#173c5c,#07111d 55%,#02050a);
+}
+
+/* MENU */
+#menu,#gameOver,#pauseScreen{
+  position:absolute;
+  inset:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+#menu{
+  background:linear-gradient(180deg,rgba(2,10,20,.2),rgba(2,5,10,.8));
+}
+
+.box{
+  width:min(90%,430px);
+  padding:30px 24px;
+  border-radius:28px;
+  background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,255,255,.15);
+  backdrop-filter:blur(14px);
+  box-shadow:0 20px 70px rgba(0,0,0,.5);
+}
+
+.logo{
+  font-size:52px;
+  margin-bottom:5px;
+}
+
+h1{
+  font-size:40px;
+  letter-spacing:2px;
+  margin-bottom:8px;
+}
+
+.sub{
+  color:#b9c9d9;
+  margin-bottom:25px;
+}
+
+button{
+  border:0;
+  border-radius:15px;
+  padding:14px 20px;
+  font-size:17px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#startBtn{
+  width:100%;
+  background:#24e06f;
+  color:#03200d;
+  box-shadow:0 7px 25px rgba(36,224,111,.25);
+}
+
+.options{
+  display:flex;
+  gap:10px;
+  margin-top:15px;
+}
+
+.options button{
+  flex:1;
+  background:rgba(255,255,255,.12);
+  color:white;
+}
+
+#best{
+  margin-top:20px;
+  color:#ffd84d;
+  font-weight:bold;
+}
+
+/* HUD */
+#hud{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  z-index:20;
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px;
+  background:rgba(0,0,0,.25);
+}
+
+.stat{
+  background:rgba(255,255,255,.1);
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:14px;
+  font-weight:bold;
+}
+
+#pauseBtn{
+  padding:8px 12px;
+  background:#ffd84d;
+}
+
+/* OBJECTS */
+#objects{
+  position:absolute;
+  inset:0;
+}
+
+/* FRUIT */
+.fruit,.bomb{
+  position:absolute;
+  width:80px;
+  height:80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+  pointer-events:auto;
+  animation:rise 3s linear forwards;
+  filter:drop-shadow(0 9px 8px rgba(0,0,0,.55));
+}
+
+.fruit{
+  font-size:57px;
+}
+
+.bomb{
+  font-size:55px;
+}
+
+@keyframes rise{
+  0%{
+    transform:translateY(100vh) rotate(0deg) scale(.8);
+  }
+  100%{
+    transform:translateY(-150px) rotate(520deg) scale(1.05);
+  }
+}
+
+/* SLASH */
+.slash{
+  position:absolute;
+  height:5px;
+  border-radius:10px;
+  background:white;
+  box-shadow:0 0 12px white;
+  transform-origin:left center;
+  z-index:30;
+  pointer-events:none;
+}
+
+/* PARTICLES */
+.particle{
+  position:absolute;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:white;
+  pointer-events:none;
+  z-index:40;
+  animation:particle .6s ease-out forwards;
+}
+
+@keyframes particle{
+  to{
+    transform:translate(var(--x),var(--y)) scale(0);
+    opacity:0;
+  }
+}
+
+/* COMBO */
+#combo{
+  position:absolute;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%) scale(.5);
+  z-index:25;
+  font-size:30px;
+  font-weight:bold;
+  color:#ffd84d;
+  opacity:0;
+  pointer-events:none;
+}
+
+.comboShow{
+  animation:combo .7s ease-out;
+}
+
+@keyframes combo{
+  0%{opacity:0;transform:translateX(-50%) scale(.5)}
+  35%{opacity:1;transform:translateX(-50%) scale(1.3)}
+  100%{opacity:0;transform:translateX(-50%) scale(1)}
+}
+
+/* PAUSE */
+#pauseScreen,#gameOver{
+  display:none;
+  background:rgba(0,0,0,.72);
+}
+
+.pauseTitle,.overTitle{
+  font-size:40px;
+  margin-bottom:20px;
+}
+
+#resumeBtn,#restartBtn{
+  background:#24e06f;
+  width:100%;
+}
+
+.final{
+  color:#ffd84d;
+  font-size:25px;
+  margin-bottom:20px;
+}
+
+.newRecord{
+  color:#24e06f;
+  font-weight:bold;
+  margin-bottom:15px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+  <!-- MENU -->
+  <div id="menu">
+    <div class="box">
+      <div class="logo">🍉🍎🍌</div>
+      <h1>FRUIT SLASH</h1>
+      <p class="sub">Kata matunda. Epuka mabomu!</p>
+
+      <button id="startBtn">▶ ANZA MCHEZO</button>
+
+      <div class="options">
+        <button id="musicBtn">🎵 MUSIC ON</button>
+        <button id="soundBtn">🔊 SOUND ON</button>
+      </div>
+
+      <div id="best">🏆 HIGH SCORE: 0</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="stat">🏆 <span id="score">0</span></div>
+    <div class="stat">🔥 x<span id="comboText">1</span></div>
+    <div class="stat">❤️ <span id="lives">3</span></div>
+    <div class="stat">LV <span id="level">1</span></div>
+    <div class="stat">⏱️ <span id="time">60</span></div>
+    <button id="pauseBtn">⏸️</button>
+  </div>
+
+  <div id="combo"></div>
+
+  <div id="objects"></div>
+
+  <!-- PAUSE -->
+  <div id="pauseScreen">
+    <div class="box">
+      <div class="pauseTitle">⏸️ PAUSE</div>
+      <button id="resumeBtn">▶ ENDELEA</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameOver">
+    <div class="box">
+      <div class="overTitle">🎮 GAME OVER</div>
+
+      <div class="final">
+        SCORE: <span id="finalScore">0</span>
+      </div>
+
+      <div class="newRecord" id="newRecord">
+        🏆 NEW HIGH SCORE!
+      </div>
+
+      <button id="restartBtn">🔄 CHEZA TENA</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+/* =========================
+   VARIABLES
+========================= */
+
+let score = 0;
+let lives = 3;
+let time = 60;
+let level = 1;
+let combo = 1;
+
+let playing = false;
+let paused = false;
+
+let spawnTimer = null;
+let clockTimer = null;
+
+let musicOn = true;
+let soundOn = true;
+
+let audio = null;
+let musicTimer = null;
+
+let startX = 0;
+let startY = 0;
+
+const fruits = [
+  "🍎","🍊","🍉","🍌",
+  "🍓","🍇","🥝","🍍"
+];
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const menu = document.getElementById("menu");
+const hud = document.getElementById("hud");
+const objects = document.getElementById("objects");
+
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const timeEl = document.getElementById("time");
+const levelEl = document.getElementById("level");
+const comboTextEl = document.getElementById("comboText");
+
+const pauseScreen = document.getElementById("pauseScreen");
+const gameOver = document.getElementById("gameOver");
+
+const finalScoreEl = document.getElementById("finalScore");
+const bestEl = document.getElementById("best");
+const newRecordEl = document.getElementById("newRecord");
+
+let bestScore = Number(
+  localStorage.getItem("fruitSlashHighScore") || 0
+);
+
+bestEl.textContent = "🏆 HIGH SCORE: " + bestScore;
+
+/* =========================
+   AUDIO
+========================= */
+
+function initAudio(){
+
+  if(audio) return;
+
+  try{
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if(!AudioContext) return;
+
+    audio = new AudioContext();
+
+  }catch(error){
+    audio = null;
+  }
+}
+
+function beep(frequency,duration,type){
+
+  if(!soundOn || !audio) return;
+
+  try{
+
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+
+    oscillator.frequency.value = frequency;
+    oscillator.type = type || "sine";
+
+    gain.gain.setValueAtTime(
+      .08,
+      audio.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audio.currentTime + duration
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+
+    oscillator.start();
+    oscillator.stop(audio.currentTime + duration);
+
+  }catch(error){}
+}
+
+function fruitSound(){
+  beep(650,.09,"sine");
+}
+
+function bombSound(){
+  beep(90,.3,"sawtooth");
+}
+
+/* =========================
+   MUSIC
+========================= */
+
+function startMusic(){
+
+  if(!musicOn || !audio) return;
+
+  clearInterval(musicTimer);
+
+  const notes = [
+    261,329,392,523,
+    392,329,261
+  ];
+
+  let i = 0;
+
+  musicTimer = setInterval(function(){
+
+    if(!playing || paused || !musicOn) return;
+
+    beep(notes[i],.12,"triangle");
+
+    i++;
+
+    if(i >= notes.length){
+      i = 0;
+    }
+
+  },260);
+}
+
+function stopMusic(){
+  clearInterval(musicTimer);
+}
+
+/* =========================
+   START
+========================= */
+
+function startGame(){
+
+  initAudio();
+
+  if(audio && audio.state === "suspended"){
+    audio.resume();
+  }
+
+  score = 0;
+  lives = 3;
+  time = 60;
+  level = 1;
+  combo = 1;
+
+  playing = true;
+  paused = false;
+
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+  timeEl.textContent = time;
+  levelEl.textContent = level;
+  comboTextEl.textContent = combo;
+
+  objects.innerHTML = "";
+
+  menu.style.display = "none";
+  gameOver.style.display = "none";
+  pauseScreen.style.display = "none";
+  hud.style.display = "flex";
+
+  startSpawning();
+  startClock();
+  startMusic();
+}
+
+/* =========================
+   SPAWN
+========================= */
+
+function startSpawning(){
+
+  clearInterval(spawnTimer);
+
+  spawnTimer = setInterval(function(){
+
+    if(!playing || paused) return;
+
+    createObject();
+
+  },Math.max(330,750-(level*35)));
+}
+
+/* =========================
+   CREATE OBJECT
+========================= */
+
+function createObject(){
+
+  const bombChance =
+    Math.min(.25,.08 + level*.015);
+
+  const isBomb =
+    Math.random() < bombChance;
+
+  const obj =
+    document.createElement("div");
+
+  if(isBomb){
+
+    obj.className = "bomb";
+    obj.textContent = "💣";
+    obj.dataset.type = "bomb";
+
+  }else{
+
+    obj.className = "fruit";
+    obj.textContent =
+      fruits[Math.floor(Math.random()*fruits.length)];
+
+    obj.dataset.type = "fruit";
+  }
+
+  const maxX =
+    Math.max(10,window.innerWidth-90);
+
+  obj.style.left =
+    Math.random()*maxX + "px";
+
+  objects.appendChild(obj);
+
+  setTimeout(function(){
+
+    if(obj.parentNode){
+      obj.remove();
+    }
+
+  },3000);
+}
+
+/* =========================
+   POINTER DOWN
+========================= */
+
+game.addEventListener("pointerdown",function(e){
+
+  if(!playing || paused) return;
+
+  startX = e.clientX;
+  startY = e.clientY;
+});
+
+/* =========================
+   POINTER UP
+========================= */
+
+game.addEventListener("pointerup",function(e){
+
+  if(!playing || paused) return;
+
+  const endX = e.clientX;
+  const endY = e.clientY;
+
+  drawSlash(
+    startX,
+    startY,
+    endX,
+    endY
+  );
+
+  checkHits(
+    startX,
+    startY,
+    endX,
+    endY
+  );
+});
+
+/* =========================
+   CHECK HITS
+========================= */
+
+function checkHits(x1,y1,x2,y2){
+
+  const items =
+    document.querySelectorAll(".fruit,.bomb");
+
+  let hitSomething = false;
+
+  items.forEach(function(obj){
+
+    const r =
+      obj.getBoundingClientRect();
+
+    const cx =
+      r.left + r.width/2;
+
+    const cy =
+      r.top + r.height/2;
+
+    const near =
+      distanceToLine(
+        cx,cy,
+        x1,y1,
+        x2,y2
+      );
+
+    if(near < 55){
+
+      hitSomething = true;
+
+      if(obj.dataset.type === "bomb"){
+
+        bombSound();
+
+        lives--;
+
+        combo = 1;
+
+        livesEl.textContent = lives;
+        comboTextEl.textContent = combo;
+
+        createParticles(cx,cy,12);
+
+        obj.remove();
+
+        if(lives <= 0){
+          endGame();
+        }
+
+      }else{
+
+        fruitSound();
+
+        score += 10 * combo;
+
+        if(combo < 8){
+          combo++;
+        }
+
+        scoreEl.textContent = score;
+        comboTextEl.textContent = combo;
+
+        showCombo(cx,cy);
+
+        createParticles(cx,cy,14);
+
+        obj.remove();
+
+        updateLevel();
+      }
+    }
+  });
+
+  if(!hitSomething){
+    combo = 1;
+    comboTextEl.textContent = combo;
+  }
+}
+
+/* =========================
+   DISTANCE
+========================= */
+
+function distanceToLine(px,py,x1,y1,x2,y2){
+
+  const A = px-x1;
+  const B = py-y1;
+  const C = x2-x1;
+  const D = y2-y1;
+
+  const dot = A*C+B*D;
+  const len = C*C+D*D;
+
+  let param = -1;
+
+  if(len !== 0){
+    param = dot/len;
+  }
+
+  let xx;
+  let yy;
+
+  if(param < 0){
+    xx = x1;
+    yy = y1;
+  }else if(param > 1){
+    xx = x2;
+    yy = y2;
+  }else{
+    xx = x1 + param*C;
+    yy = y1 + param*D;
+  }
+
+  const dx = px-xx;
+  const dy = py-yy;
+
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+/* =========================
+   SLASH
+========================= */
+
+function drawSlash(x1,y1,x2,y2){
+
+  const line =
+    document.createElement("div");
+
+  line.className = "slash";
+
+  const dx = x2-x1;
+  const dy = y2-y1;
+
+  const length =
+    Math.sqrt(dx*dx+dy*dy);
+
+  const angle =
+    Math.atan2(dy,dx)*180/Math.PI;
+
+  line.style.left = x1+"px";
+  line.style.top = y1+"px";
+  line.style.width = length+"px";
+  line.style.transform =
+    "rotate("+angle+"deg)";
+
+  game.appendChild(line);
+
+  setTimeout(function(){
+    line.remove();
+  },130);
+}
+
+/* =========================
+   PARTICLES
+========================= */
+
+function createParticles(x,y,count){
+
+  for(let i=0;i<count;i++){
+
+    const p =
+      document.createElement("div");
+
+    p.className = "particle";
+
+    p.style.left = x+"px";
+    p.style.top = y+"px";
+
+    p.style.setProperty(
+      "--x",
+      ((Math.random()-.5)*140)+"px"
+    );
+
+    p.style.setProperty(
+      "--y",
+      ((Math.random()-.5)*140)+"px"
+    );
+
+    game.appendChild(p);
+
+    setTimeout(function(){
+      p.remove();
+    },650);
+  }
+}
+
+/* =========================
+   COMBO
+========================= */
+
+function showCombo(x,y){
+
+  const comboEl =
+    document.getElementById("combo");
+
+  comboEl.textContent =
+    "🔥 COMBO x"+combo;
+
+  comboEl.style.left =
+    x+"px";
+
+  comboEl.style.top =
+    y+"px";
+
+  comboEl.classList.remove("comboShow");
+
+  void comboEl.offsetWidth;
+
+  comboEl.classList.add("comboShow");
+}
+
+/* =========================
+   LEVEL
+========================= */
+
+function updateLevel(){
+
+  const newLevel =
+    Math.floor(score/100)+1;
+
+  if(newLevel !== level){
+
+    level = newLevel;
+
+    levelEl.textContent = level;
+
+    startSpawning();
+
+    beep(900,.15,"triangle");
+  }
+}
+
+/* =========================
+   CLOCK
+========================= */
+
+function startClock(){
+
+  clearInterval(clockTimer);
+
+  clockTimer =
+    setInterval(function(){
+
+      if(!playing || paused) return;
+
+      time--;
+
+      timeEl.textContent = time;
+
+      if(time <= 0){
+        endGame();
+      }
+
+    },1000);
+}
+
+/* =========================
+   PAUSE
+========================= */
+
+function pauseGame(){
+
+  if(!playing) return;
+
+  paused = true;
+
+  pauseScreen.style.display = "flex";
+
+  stopMusic();
+}
+
+/* =========================
+   RESUME
+========================= */
+
+function resumeGame(){
+
+  if(!playing) return;
+
+  paused = false;
+
+  pauseScreen.style.display = "none";
+
+  startMusic();
+}
+
+/* =========================
+   END
+========================= */
+
+function endGame(){
+
+  playing = false;
+  paused = false;
+
+  clearInterval(spawnTimer);
+  clearInterval(clockTimer);
+
+  stopMusic();
+
+  objects.innerHTML = "";
+
+  finalScoreEl.textContent = score;
+
+  newRecordEl.style.display = "none";
+
+  if(score > bestScore){
+
+    bestScore = score;
+
+    localStorage.setItem(
+      "fruitSlashHighScore",
+      bestScore
+    );
+
+    bestEl.textContent =
+      "🏆 HIGH SCORE: "+bestScore;
+
+    newRecordEl.style.display = "block";
+  }
+
+  hud.style.display = "none";
+  pauseScreen.style.display = "none";
+  gameOver.style.display = "flex";
+}
+
+/* =========================
+   MUSIC BUTTON
+========================= */
+
+document.getElementById("musicBtn")
+.addEventListener("click",function(){
+
+  musicOn = !musicOn;
+
+  this.textContent =
+    musicOn ? "🎵 MUSIC ON" : "🔇 MUSIC OFF";
+
+  if(musicOn && playing){
+    initAudio();
+    startMusic();
+  }else{
+    stopMusic();
+  }
+});
+
+/* =========================
+   SOUND BUTTON
+========================= */
+
+document.getElementById("soundBtn")
+.addEventListener("click",function(){
+
+  soundOn = !soundOn;
+
+  this.textContent =
+    soundOn ? "🔊 SOUND ON" : "🔇 SOUND OFF";
+});
+
+/* =========================
+   BUTTONS
+========================= */
+
+document.getElementById("startBtn")
+.addEventListener("click",startGame);
+
+document.getElementById("pauseBtn")
+.addEventListener("click",pauseGame);
+
+document.getElementById("resumeBtn")
+.addEventListener("click",resumeGame);
+
+document.getElementById("restartBtn")
+.addEventListener("click",startGame);
+
+</script>
+
+</body>
+</html>
